@@ -118,7 +118,7 @@ section {
 }
 
 .home-container {
-    background: url("img/homepage.jpeg");
+    background: url("../img/homepage.jpeg");
     height: 100vh;
     width: 100%;
     background-size: cover;

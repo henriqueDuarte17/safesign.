@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <script src="js/dashboard.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeSign — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+<link rel="stylesheet" href="css/dashboard.css">
+<script src="js/dashboard.js"></script>
+<body>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <a class="brand" href="index.html">Safe<span>Sign.</span></a>
+      <nav class="topbar-nav">
+        <a class="nav-item active" href="#">📄 Documentos</a>
+        <a class="nav-item" href="index.html">🏠 Site</a>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <div class="user-info">
+        <div class="user-name" id="topbarName">—</div>
+        <div class="user-email" id="topbarEmail">—</div>
+      </div>
+      <div class="avatar" id="avatarEl">?</div>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="page-header">
+      <div>
+        <h1>Os meus Documentos</h1>
+        <p>Gerencie, assine e guarde todos os seus documentos num só lugar.</p>
+      </div>
+      <button class="btn-new" onclick="openUpload()">+ Novo Documento</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Total</div><div class="stat-val" id="sTotal">0</div></div>
+      <div class="stat"><div class="stat-label">Assinados</div><div class="stat-val c-green" id="sSigned">0</div></div>
+      <div class="stat"><div class="stat-label">Pendentes</div><div class="stat-val c-blue" id="sPending">0</div></div>
+      <div class="stat"><div class="stat-label">Tamanho total</div><div class="stat-val c-orange" id="sSize">0 KB</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Pesquisar documentos..." oninput="renderDocs()">
+      </div>
+      <button class="filter-btn active" onclick="setFilter('all',this)">Todos</button>
+      <button class="filter-btn" onclick="setFilter('pending',this)">Pendentes</button>
+      <button class="filter-btn" onclick="setFilter('signed',this)">Assinados</button>
+    </div>
+
+    <div class="doc-table-wrap">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Documento</th>
+            <th>Tipo</th>
+            <th>Data</th>
+            <th>Estado</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="docTbody">
+          <tr class="empty-row"><td colspan="5">Nenhum documento encontrado.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- UPLOAD MODAL -->
+  <div class="overlay" id="uploadOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Carregar Documento</h3>
+        <button class="btn-close" onclick="closeUpload()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="dropzone" id="dropzone"
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="handleDrop(event)">
+          <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
+            onchange="handleFileSelect(this.files[0])">
+          <div class="dz-icon">📁</div>
+          <div class="dz-title">Arraste o ficheiro ou <strong style="color:var(--main)">clique para selecionar</strong></div>
+          <div class="dz-sub">PDF, Word, Imagens, TXT — máx. <strong>20 MB</strong></div>
+        </div>
+
+        <div class="file-preview" id="filePreview">
+          <span class="fp-icon" id="fpIcon">📄</span>
+          <div class="fp-info">
+            <div class="fp-name" id="fpName">ficheiro.pdf</div>
+            <div class="fp-size" id="fpSize">0 KB</div>
+          </div>
+          <button class="fp-remove" onclick="removeFile()">✕</button>
+        </div>
+
+        <div class="upload-progress" id="uploadProgress">
+          <div class="progress-label">
+            <span>A processar ficheiro...</span>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+        </div>
+
+        <div class="upload-field">
+          <label>Nome do documento</label>
+          <input type="text" id="docNameInput" placeholder="Ex: Contrato de Prestação de Serviços">
+        </div>
+        <div class="upload-field">
+          <label>Categoria</label>
+          <select id="docCategory">
+            <option value="Contrato">Contrato</option>
+            <option value="Fatura">Fatura</option>
+            <option value="Proposta">Proposta</option>
+            <option value="Relatório">Relatório</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel-modal" onclick="closeUpload()">Cancelar</button>
+        <button class="btn-upload-confirm" id="btnUploadConfirm" onclick="confirmUpload()" disabled>
+          Carregar Documento
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW MODAL -->
+  <div class="view-modal" id="viewModal">
+    <div class="view-box">
+      <div class="view-header">
+        <h3 id="viewTitle">Documento</h3>
+        <button class="btn-close" onclick="closeView()">✕</button>
+      </div>
+      <div class="view-content" id="viewContent"></div>
+    </div>
+  </div>
+
+  <!-- SIGN MODAL -->
+  <div class="sign-modal" id="signModal">
+    <div class="sign-box">
+      <div class="sign-icon">🔐</div>
+      <h3>Confirmar Assinatura</h3>
+      <p>Está prestes a assinar criptograficamente o documento. Esta ação é irreversível e legalmente vinculativa.</p>
+      <div class="cert-box" id="certBox">
+        Algoritmo: RSA-4096 + SHA-256<br>
+        Timestamp: —<br>
+        Documento hash: —<br>
+        Assinante: —
+      </div>
+      <div class="sign-actions">
+        <button class="btn-cancel-sign" onclick="closeSign()">Cancelar</button>
+        <button class="btn-confirm-sign" onclick="confirmSign()">✓ Assinar Agora</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+</body>
+</html>

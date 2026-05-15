@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeSign — Entrar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+<link rel="stylesheet" href="css/login.css">
+<script src="js/account.js"></script>
+<body>
+  <div class="left-panel">
+    <div class="panel-content">
+      <div class="brand">Safe<span>Sign.</span></div>
+      <h1 class="panel-tagline">Assine com<br><em>confiança total.</em></h1>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="form-header">
+      <h2 id="formTitle">Bem-vindo de volta</h2>
+      <p id="formSub">Aceda à sua conta SafeSign</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Entrar</button>
+      <button class="tab" onclick="switchTab('register')">Criar Conta</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="form-section active" id="loginSection">
+      <div class="nota-entrar"><strong>Use uma conta nova ou use credenciais já registadas.</strong></div>
+      <div class="campo">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="o@email.com">
+      </div>
+      <div class="campo">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        <div class="error-msg" id="loginError">Email ou password incorretos.</div>
+      </div>
+      <button class="btn-submit" onclick="doLogin()">Entrar na Plataforma</button>
+    </div>
+
+    <!-- REGISTO -->
+    <div class="form-section" id="registerSection">
+      <div class="campo">
+        <label>Nome completo</label>
+        <input type="text" id="regName" placeholder="João Silva">
+      </div>
+      <div class="campo">
+        <label>Email</label>
+        <input type="email" id="regEmail" placeholder="o@email.com">
+      </div>
+      <div class="campo">
+        <label>Password</label>
+        <input type="password" id="regPass" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')doRegister()">
+        <div class="error-msg" id="regError"></div>
+      </div>
+      <button class="btn-submit" onclick="doRegister()">Criar Conta</button>
+    </div>
+
+    <div class="form-footer"><a href="index.html">← Voltar ao site</a></div>
+  </div>  
+</body>
+</html>
