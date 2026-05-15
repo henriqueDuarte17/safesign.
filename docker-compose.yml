@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:15
+    container_name: safesign_db
+    restart: always
+    environment:
+      POSTGRES_USER: user_admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: safesign_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    image: node:18
+    container_name: safesign_api
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install && npm start"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - POSTGRES_USER=user_admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=safesign_db
+      - POSTGRES_PORT=5432
