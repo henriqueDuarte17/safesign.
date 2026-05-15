@@ -430,3 +430,24 @@ section {
     transform: scale(1.03);
 }
 
+/* --- RESPONSIVIDADE HOME --- */
+@media (max-width: 768px) {
+    .header section { padding: 2rem; }
+    .navebar { display: none; } /* Esconde o menu para não sobrepor o botão Portal */
+    
+    .content h3 { font-size: 4rem; } /* Texto menor para caber no ecrã */
+    .content h1 { font-size: 2rem; }
+    
+    .about .row { flex-direction: column; text-align: center; }
+    .about .row .content { padding: 1.5rem 0; }
+
+    .segurança .boxcontainer {
+        grid-template-columns: 1fr; /* Caixas de segurança uma por baixo da outra */
+    }
+
+    .funciona-container {
+        grid-template-columns: 1fr; /* Texto e imagem empilhados */
+    }
+    .steps-image { order: -1; } /* Imagem aparece antes do texto no tlm */
+}
+

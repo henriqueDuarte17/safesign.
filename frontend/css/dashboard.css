@@ -329,3 +329,29 @@
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast.success { background: #0a6e50; }
     .toast.error   { background: #c0392b; }
+
+    /* --- RESPONSIVIDADE DASHBOARD --- */
+@media (max-width: 992px) {
+    .main { padding: 1.5rem 1rem; }
+    .stats { grid-template-columns: repeat(2, 1fr); } /* 2 colunas em tablets */
+}
+
+@media (max-width: 768px) {
+    .topbar { padding: 0 1rem; }
+    .topbar-nav { display: none; } /* Esconde nav links no tlm para não amontoar */
+    
+    .page-header { flex-direction: column; gap: 1rem; }
+    .btn-new { width: 100%; justify-content: center; }
+
+    .stats { grid-template-columns: 1fr; } /* 1 coluna em tlm */
+    
+    .toolbar { flex-direction: column; }
+    .search-box { width: 100%; }
+
+    /* TABELA */
+    .doc-table-wrap {
+        overflow-x: auto; /* Permite scroll lateral na tabela */
+        -webkit-overflow-scrolling: touch;
+    }
+    .doc-table { min-width: 600px; } /* Garante que a tabela não "esmague" o texto */
+}

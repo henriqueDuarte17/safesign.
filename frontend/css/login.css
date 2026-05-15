@@ -88,3 +88,18 @@
     }
     .form-footer { margin-top: 2rem; text-align: center; font-size: 12px; color: rgba(13,43,69,0.4); }
     .form-footer a { color: var(--main); text-decoration: none; font-weight: 500; }
+
+    /* --- RESPONSIVIDADE LOGIN --- */
+@media (max-width: 850px) {
+    body { overflow: auto; } /* Permite fazer scroll no tlm */
+    .left-panel { display: none; } /* Esconde o painel azul */
+    
+    .right-panel {
+        width: 100%;
+        padding: 2rem 1.5rem;
+        min-height: 100vh;
+        justify-content: flex-start;
+    }
+    
+    .brand { color: var(--dark); margin-bottom: 2rem; } /* Garante que o logo se vê no fundo branco */
+}

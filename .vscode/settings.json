@@ -1,0 +1,15 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "SafeSign",
+            "database": "safesign_db",
+            "username": "user_admin",
+            "password": "password123"
+        }
+    ]
+}
