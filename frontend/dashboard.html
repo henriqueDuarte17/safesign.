@@ -22,7 +22,6 @@
         <div class="user-name" id="topbarName">—</div>
         <div class="user-email" id="topbarEmail">—</div>
       </div>
-      <div class="avatar" id="avatarEl">?</div>
       <button class="btn-logout" onclick="doLogout()">Sair</button>
     </div>
   </div>
@@ -53,14 +52,13 @@
         <thead>
           <tr>
             <th>Documento</th>
-            <th>Tipo</th>
             <th>Data</th>
             <th>Estado</th>
             <th>Ações</th>
           </tr>
         </thead>
         <tbody id="docTbody">
-          <tr class="empty-row"><td colspan="5">Nenhum documento encontrado.</td></tr>
+          <tr class="empty-row"><td colspan="4">Nenhum documento encontrado.</td></tr>
         </tbody>
       </table>
     </div>
@@ -80,13 +78,11 @@
           ondrop="handleDrop(event)">
           <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
             onchange="handleFileSelect(this.files[0])">
-          <div class="dz-icon">📁</div>
-          <div class="dz-title">Arraste o ficheiro ou <strong style="color:var(--main)">clique para selecionar</strong></div>
-          <div class="dz-sub">PDF, Word, Imagens, TXT — máx. <strong>20 MB</strong></div>
+          <div class="dz-title">Arraste o ficheiro ou clique para selecionar</div>
+          <div class="dz-sub">PDF, Word, Imagens, TXT — máx.20 MB</div>
         </div>
 
         <div class="file-preview" id="filePreview">
-          <span class="fp-icon" id="fpIcon">📄</span>
           <div class="fp-info">
             <div class="fp-name" id="fpName">ficheiro.pdf</div>
 
@@ -104,17 +100,7 @@
 
         <div class="upload-field">
           <label>Nome do documento</label>
-          <input type="text" id="docNameInput" placeholder="Ex: Contrato de Prestação de Serviços">
-        </div>
-        <div class="upload-field">
-          <label>Categoria</label>
-          <select id="docCategory">
-            <option value="Contrato">Contrato</option>
-            <option value="Fatura">Fatura</option>
-            <option value="Proposta">Proposta</option>
-            <option value="Relatório">Relatório</option>
-            <option value="Outro">Outro</option>
-          </select>
+          <input type="text" id="docNameInput" placeholder="Ex: Contrato">
         </div>
       </div>
       <div class="modal-footer">
@@ -140,9 +126,8 @@
   <!-- SIGN MODAL -->
   <div class="sign-modal" id="signModal">
     <div class="sign-box">
-      <div class="sign-icon">🔐</div>
       <h3>Confirmar Assinatura</h3>
-      <p>Está prestes a assinar criptograficamente o documento. Esta ação é irreversível e legalmente vinculativa.</p>
+      <p>Está prestes a assinar criptograficamente o documento.</p>
       <div class="cert-box" id="certBox">
         Algoritmo: RSA-4096 + SHA-256<br>
         Timestamp: —<br>
@@ -151,7 +136,7 @@
       </div>
       <div class="sign-actions">
         <button class="btn-cancel-sign" onclick="closeSign()">Cancelar</button>
-        <button class="btn-confirm-sign" onclick="confirmSign()">✓ Assinar Agora</button>
+        <button class="btn-confirm-sign" onclick="confirmSign()"> Assinar Agora</button>
       </div>
     </div>
   </div>

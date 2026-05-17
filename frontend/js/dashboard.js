@@ -1,8 +1,13 @@
 // ---- CONFIGURAÇÃO INICIAL ----
 const SESS = 'safesign_session';
+const DB = 'safesign_users';
 
 function getEmail() { 
     return sessionStorage.getItem(SESS); 
+}
+
+function getUsers() { 
+    try { return JSON.parse(localStorage.getItem(DB) || '{}'); } catch { return {}; } 
 }
 
 // ---- BOOT / PROTEÇÃO DE PÁGINA ----
@@ -10,6 +15,10 @@ const email = getEmail();
 if (!email) { 
     window.location.href = 'login.html'; 
 } else {
+    const users = getUsers();
+    const user = users[email];
+    const userName = user?.name || email;
+    document.getElementById('topbarName').textContent = userName;
     document.getElementById('topbarEmail').textContent = email;
 }
 
@@ -32,6 +41,15 @@ function setFilter(f, btn) {
     renderDocs();
 }
 
+// ---- ATUALIZAR STATS ----
+function updateStats(docs) {
+    if (!docs) docs = [];
+    const signed = docs.filter(d => d.status === 'signed').length;
+    const pending = docs.filter(d => d.status === 'pending').length;
+    document.getElementById('sSigned').textContent = signed;
+    document.getElementById('sPending').textContent = pending;
+}
+
 // ---- LISTAGEM (GET) ----
 async function renderDocs() {
     const tbody = document.getElementById('docTbody');
@@ -40,6 +58,7 @@ async function renderDocs() {
         const docs = await response.json();
 
         tbody.innerHTML = '';
+        updateStats(docs);
         if (!docs || docs.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:3rem; opacity:0.5;">Nenhum documento encontrado.</td></tr>`;
             return;
@@ -50,21 +69,19 @@ async function renderDocs() {
             tr.innerHTML = `
                 <td>
                     <div class="doc-name-cell">
-                        <div class="doc-icon">${doc.category === 'Contrato' ? '📜' : '📄'}</div>
                         <div>
                             <div class="doc-title">${doc.name}</div>
                             <div class="doc-info">${doc.original_name}</div>
                         </div>
                     </div>
                 </td>
-                <td><span class="category-tag">${doc.category}</span></td>
                 <td>${new Date(doc.created_at).toLocaleDateString('pt-PT')}</td>
                 <td><span class="status-tag status-${doc.status}">${doc.status === 'signed' ? 'Assinado' : 'Pendente'}</span></td>
                 <td>
                     <div class="actions">
-                        <button class="btn-action" onclick="openView('${doc.data_url}', '${doc.name}')" title="Ver">👁️</button>
-                        ${doc.status === 'pending' ? `<button class="btn-action btn-sign" onclick="openSign(${doc.id}, '${doc.name}', '${doc.hash}')" title="Assinar">✍️</button>` : ''}
-                        <button class="btn-action" onclick="deleteDoc(${doc.id})" title="Apagar">🗑️</button>
+                        <button class="btn-action" onclick="openView('${doc.data_url}', '${doc.name}')" title="Ver"> Ver </button>
+                        ${doc.status === 'pending' ? `<button class="btn-action btn-sign" onclick="openSign(${doc.id}, '${doc.name}', '${doc.hash}')" title="Assinar"> Assinar </button>` : ''}
+                        <button class="btn-action" onclick="deleteDoc(${doc.id})" title="Apagar"> Apagar</button>
                     </div>
                 </td>
             `;
@@ -115,7 +132,6 @@ async function confirmUpload() {
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('name', document.getElementById('docNameInput').value);
-    formData.append('category', document.getElementById('docCategory').value);
     formData.append('user_email', email);
     formData.append('hash', 'hash_' + Math.random().toString(36).substring(7));
 
@@ -128,7 +144,6 @@ async function confirmUpload() {
         if (response.ok) {
             closeUpload();
             renderDocs();
-            showToast("Documento carregado!", "success");
         } else {
             showToast("Erro no servidor", "error");
         }
@@ -171,7 +186,7 @@ async function deleteDoc(id) {
     if (!confirm("Eliminar documento?")) return;
     try {
         const response = await fetch(`http://localhost:3000/api/documents/${id}`, { method: 'DELETE' });
-        if (response.ok) { renderDocs(); showToast("Eliminado"); }
+        if (response.ok) { renderDocs();}
     } catch (e) { showToast("Erro ao eliminar", "error"); }
 }
 
