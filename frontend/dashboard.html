@@ -16,10 +16,6 @@
   <div class="topbar">
     <div class="topbar-left">
       <a class="brand" href="index.html">Safe<span>Sign.</span></a>
-      <nav class="topbar-nav">
-        <a class="nav-item active" href="#">📄 Documentos</a>
-        <a class="nav-item" href="index.html">🏠 Site</a>
-      </nav>
     </div>
     <div class="topbar-right">
       <div class="user-info">
@@ -38,21 +34,15 @@
         <h1>Os meus Documentos</h1>
         <p>Gerencie, assine e guarde todos os seus documentos num só lugar.</p>
       </div>
-      <button class="btn-new" onclick="openUpload()">+ Novo Documento</button>
+      <button class="btn-new" onclick="openUpload()">Novo Documento</button>
     </div>
 
     <div class="stats">
-      <div class="stat"><div class="stat-label">Total</div><div class="stat-val" id="sTotal">0</div></div>
       <div class="stat"><div class="stat-label">Assinados</div><div class="stat-val c-green" id="sSigned">0</div></div>
       <div class="stat"><div class="stat-label">Pendentes</div><div class="stat-val c-blue" id="sPending">0</div></div>
-      <div class="stat"><div class="stat-label">Tamanho total</div><div class="stat-val c-orange" id="sSize">0 KB</div></div>
     </div>
 
     <div class="toolbar">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Pesquisar documentos..." oninput="renderDocs()">
-      </div>
       <button class="filter-btn active" onclick="setFilter('all',this)">Todos</button>
       <button class="filter-btn" onclick="setFilter('pending',this)">Pendentes</button>
       <button class="filter-btn" onclick="setFilter('signed',this)">Assinados</button>
@@ -99,7 +89,7 @@
           <span class="fp-icon" id="fpIcon">📄</span>
           <div class="fp-info">
             <div class="fp-name" id="fpName">ficheiro.pdf</div>
-            <div class="fp-size" id="fpSize">0 KB</div>
+
           </div>
           <button class="fp-remove" onclick="removeFile()">✕</button>
         </div>

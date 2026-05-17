@@ -87,7 +87,6 @@ function handleFileSelect(file) {
     if (!file) return;
     selectedFile = file;
     document.getElementById('fpName').textContent = file.name;
-    document.getElementById('fpSize').textContent = (file.size / 1024).toFixed(1) + " KB";
     document.getElementById('filePreview').classList.add('show');
     document.getElementById('dropzone').style.display = 'none';
     document.getElementById('btnUploadConfirm').disabled = false;
