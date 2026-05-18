@@ -20,3 +20,11 @@ CREATE TABLE IF NOT EXISTS documents (
     hash VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS document_signers (
+    id SERIAL PRIMARY KEY,
+    document_id INT REFERENCES documents(id) ON DELETE CASCADE,
+    signer_email VARCHAR(100) REFERENCES users(email),
+    status VARCHAR(20) DEFAULT 'pending',
+    signed_at VARCHAR(50)
+);

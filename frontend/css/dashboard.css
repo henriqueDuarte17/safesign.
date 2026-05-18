@@ -109,7 +109,7 @@
       border-radius: 20px; text-transform: uppercase; letter-spacing: 0.04em;
     }
 
-    .td-actions { display: flex; gap: 0.5rem; align-items: center; }
+    .actions, .td-actions { display: flex; gap: 0.5rem; align-items: center; }
     .btn-action {
       padding: 0.38rem 0.85rem; border-radius: 8px; font-size: 12px; font-weight: 600;
       cursor: pointer; transition: 0.2s; font-family: 'DM Sans', sans-serif; border: 1.5px solid transparent;

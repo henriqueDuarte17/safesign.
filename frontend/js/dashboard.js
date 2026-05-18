@@ -50,11 +50,20 @@ function updateStats(docs) {
     document.getElementById('sPending').textContent = pending;
 }
 
+function formatSignerList(signers = []) {
+    if (!Array.isArray(signers) || signers.length === 0) {
+        return '<span style="opacity: .6;">Sem assinaturas</span>';
+    }
+    return signers.map(s => {
+        return `<div>${statusIcon} ${s.email}</div>`;
+    }).join('');
+}
+
 // ---- LISTAGEM (GET) ----
 async function renderDocs() {
     const tbody = document.getElementById('docTbody');
     try {
-        const response = await fetch(`http://localhost:3000/api/documents/${encodeURIComponent(email)}`);
+        const response = await fetch(`http://127.0.0.1:3000/api/documents?email=${encodeURIComponent(email)}`);
         const docs = await response.json();
 
         tbody.innerHTML = '';
@@ -77,6 +86,7 @@ async function renderDocs() {
                 </td>
                 <td>${new Date(doc.created_at).toLocaleDateString('pt-PT')}</td>
                 <td><span class="status-tag status-${doc.status}">${doc.status === 'signed' ? 'Assinado' : 'Pendente'}</span></td>
+                <td>${formatSignerList(doc.signers)}</td>
                 <td>
                     <div class="actions">
                         <button class="btn-action" onclick="openView('${doc.data_url}', '${doc.name}')" title="Ver"> Ver </button>
@@ -98,6 +108,7 @@ function closeUpload() {
     document.getElementById('uploadOverlay').classList.remove('show');
     removeFile();
     document.getElementById('docNameInput').value = '';
+    document.getElementById('signersInput').value = '';
 }
 
 function handleFileSelect(file) {
@@ -122,45 +133,74 @@ function removeFile() {
 }
 
 async function confirmUpload() {
-    console.log("Iniciando upload..."); // Teste na consola
-    if (!selectedFile) return;
+  // 1. Capturar os elementos do teu HTML
+  const fileInput = document.getElementById('fileInput');
+  const docNameInput = document.getElementById('docNameInput');
+  const signersInput = document.getElementById('signersInput');
 
-    const btn = document.getElementById('btnUploadConfirm');
-    btn.disabled = true;
-    btn.textContent = 'A carregar...';
+  // 2. Identificar o utilizador logado através do email na tua topbar
+  const topbarEmailElement = document.getElementById('topbarEmail');
+  const userEmail = topbarEmailElement ? topbarEmailElement.innerText.trim() : null;
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('name', document.getElementById('docNameInput').value);
-    formData.append('user_email', email);
-    formData.append('hash', 'hash_' + Math.random().toString(36).substring(7));
+  if (!userEmail || userEmail === "—") {
+    alert("Erro: Não foi possível identificar o utilizador logado.");
+    return;
+  }
 
-    try {
-        const response = await fetch('http://localhost:3000/api/documents/upload', {
-            method: 'POST',
-            body: formData
-        });
+  // 3. Validação original: Garante que escolheu um ficheiro e deu um nome
+  if (!fileInput.files[0] || !docNameInput.value) {
+    alert("Por favor, selecione um ficheiro e dê-lhe um nome.");
+    return;
+  }
 
-        if (response.ok) {
-            closeUpload();
-            renderDocs();
-        } else {
-            showToast("Erro no servidor", "error");
-        }
-    } catch (error) {
-        console.error(error);
-        showToast("Erro de ligação", "error");
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Carregar Documento';
+  // 4. Processar a string dos emails dos signatários (separa por vírgulas e limpa espaços)
+  const rawSigners = signersInput ? signersInput.value : '';
+  const signersArray = rawSigners 
+    ? rawSigners.split(',').map(email => email.trim()).filter(email => email.length > 0)
+    : [];
+
+  // 5. Inicializar o FormData (Essencial vir ANTES de qualquer append para evitar o erro de inicialização!)
+  const formData = new FormData();
+  
+  // 6. Empacotar todos os dados para enviar ao teu server.js
+  formData.append('file', fileInput.files[0]); // Mantém o nome 'file' esperado pelo teu Multer
+  formData.append('name', docNameInput.value);
+  formData.append('user_email', userEmail);
+  formData.append('category', 'Contrato');
+  
+  // Envia a lista de signatários estruturada em formato de texto JSON
+  formData.append('signers', JSON.stringify(signersArray));
+
+  // 7. Enviar os dados via fetch para a rota real de upload do teu backend
+  try {
+    const response = await fetch('http://127.0.0.1:3000/api/documents/upload', {
+      method: 'POST',
+      body: formData // Passamos o contentor completo aqui
+    });
+
+    if (response.ok) {
+      alert("Documento carregado e partilhado com sucesso!");
+      closeUpload(); // Fecha o teu modal e limpa os campos automaticamente
+      
+      // Se tiveres a função que recarrega a tabela no teu ecrã, ela é executada aqui
+      if (typeof loadDocuments === 'function') {
+        loadDocuments();
+      }
+    } else {
+      const errorData = await response.json();
+      alert(errorData.error || "Erro ao efetuar o upload.");
     }
+  } catch (error) {
+    console.error("Erro na ligação ao servidor:", error);
+    alert("Não foi possível ligar ao servidor. Verifique se o Docker está ativo.");
+  }
 }
 
 // ---- AÇÕES (VIEW/SIGN/DELETE) ----
 function openView(url, name) {
     document.getElementById('viewTitle').textContent = name;
     const content = document.getElementById('viewContent');
-    const finalUrl = `http://localhost:3000${url}`;
+    const finalUrl = `http://127.0.0.1:3000${url}`;
     content.innerHTML = url.toLowerCase().endsWith('.pdf') 
         ? `<iframe src="${finalUrl}" style="width:100%;height:500px"></iframe>`
         : `<img src="${finalUrl}" style="max-width:100%">`;
@@ -177,8 +217,13 @@ function closeSign() { document.getElementById('signModal').classList.remove('sh
 
 async function confirmSign() {
     try {
-        const response = await fetch(`http://localhost:3000/api/documents/${pendingSign}/sign`, { method: 'PATCH' });
+        const response = await fetch(`http://127.0.0.1:3000/api/documents/${pendingSign}/sign`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
         if (response.ok) { closeSign(); renderDocs(); showToast("Assinado!", "success"); }
+        else { const errorData = await response.json(); showToast(errorData.error || "Erro ao assinar", "error"); }
     } catch (e) { showToast("Erro ao assinar", "error"); }
 }
 

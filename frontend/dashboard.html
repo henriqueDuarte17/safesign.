@@ -54,6 +54,7 @@
             <th>Documento</th>
             <th>Data</th>
             <th>Estado</th>
+            <th>Assinaturas</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -101,6 +102,16 @@
         <div class="upload-field">
           <label>Nome do documento</label>
           <input type="text" id="docNameInput" placeholder="Ex: Contrato">
+        </div>
+        
+        <div class="upload-field" style="margin-top: 15px;">
+          <label style="font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(13,43,69,0.5); display: block; margin-bottom: 0.4rem;">
+            Emails dos Signatários (separados por vírgula)
+          </label>
+          <input type="text" id="signersInput" placeholder="Ex: maria@iscte.pt, joao@iscte.pt" style="width: 100%; padding: 0.7rem 1rem; border: 1.5px solid rgba(13,43,69,0.13); border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--dark); background: var(--white); outline: none; transition: 0.2s;">
+          <small style="font-size: 11px; color: rgba(13,43,69,0.45); margin-top: 4px; display: block;">
+            Deixe em branco se o documento for apenas para si.
+          </small>
         </div>
       </div>
       <div class="modal-footer">

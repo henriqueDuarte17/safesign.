@@ -72,15 +72,27 @@ app.post('/api/login', async (req, res) => {
 
 // 5. ROTAS DE DOCUMENTOS (O que faltava!)
 
-// Listar documentos de um utilizador (GET) por query string
-app.get('/api/documents', async (req, res) => {
-  const email = req.query.email;
+// Listar documentos de um utilizador (GET) - suporta ?email= e /api/documents/:email
+app.get('/api/documents/:email?', async (req, res) => {
+  const email = req.params.email || req.query.email;
   if (!email) {
     return res.status(400).json({ error: 'Email do utilizador é obrigatório.' });
   }
   try {
     const result = await pool.query(
-      'SELECT * FROM documents WHERE user_email = $1 ORDER BY created_at DESC',
+      `SELECT d.*,
+              COALESCE(json_agg(
+                json_build_object(
+                  'email', s.signer_email,
+                  'status', s.status,
+                  'signed_at', s.signed_at
+                )
+              ) FILTER (WHERE s.id IS NOT NULL), '[]') AS signers
+       FROM documents d
+       LEFT JOIN document_signers s ON d.id = s.document_id
+       WHERE d.user_email = $1 OR s.signer_email = $1
+       GROUP BY d.id
+       ORDER BY d.created_at DESC`,
       [email]
     );
     res.json(result.rows);
@@ -89,31 +101,76 @@ app.get('/api/documents', async (req, res) => {
   }
 });
 
-app.get('/api/documents/:email(*)', async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM documents WHERE user_email = $1 ORDER BY created_at DESC',
-      [req.params.email]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Upload de novo documento (POST)
+// Upload de novo documento (POST) - ATUALIZADO PARA GRAVAR SIGNATÁRIOS
 app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
-  const { name, category, user_email, hash } = req.body;
-  const fileName = req.file.filename;
-  const size = req.file.size;
+  // 1. Logs para ver o que chega do frontend no terminal do Docker
+  console.log("=== NOVO UPLOAD DETETADO ===");
+  console.log("Campos de texto recebidos (req.body):", req.body);
+  console.log("Ficheiro recebido (req.file):", req.file);
+
+  const { name, category, user_email, hash, signers } = req.body;
+  const fileName = req.file ? req.file.filename : null;
+  const size = req.file ? req.file.size : 0;
+
+  if (!fileName) {
+    return res.status(400).json({ error: 'Nenhum ficheiro foi recebido pelo servidor.' });
+  }
 
   try {
+    // 2. Inserir o documento principal
     const result = await pool.query(
       'INSERT INTO documents (user_email, name, category, original_name, size_bytes, data_url, hash) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
       [user_email, name, category, fileName, size, `/uploads/${fileName}`, hash]
     );
-    res.status(201).json(result.rows[0]);
+    
+    const newDoc = result.rows[0];
+    const docId = newDoc.id;
+    console.log(`Documento guardado na tabela 'documents' com o ID: ${docId}`);
+
+    // 3. Processar os signatários com segurança máxima
+    if (signers) {
+      let signersArray = [];
+      
+      // Se vier como string JSON (enviado pelo FormData), fazemos o parse
+      try {
+        signersArray = typeof signers === 'string' ? JSON.parse(signers) : signers;
+      } catch (e) {
+        console.log("Aviso: O campo signers não era uma string JSON válida, a tentar ler como texto direto.");
+        if (typeof signers === 'string' && signers.includes('@')) {
+          signersArray = signers.split(',').map(e => e.trim());
+        }
+      }
+
+      if (!Array.isArray(signersArray)) {
+        signersArray = [signersArray];
+      }
+
+      signersArray = signersArray
+        .map(email => String(email).trim())
+        .filter(email => email.includes('@'))
+        .filter((email, index, self) => self.indexOf(email) === index);
+
+      console.log("Signatários processados para inserção:", signersArray);
+
+      if (signersArray.length > 0) {
+        for (const signerEmail of signersArray) {
+          console.log(`A tentar inserir o signatário: ${signerEmail} para o documento ${docId}`);
+          await pool.query(
+            'INSERT INTO document_signers (document_id, signer_email, status) VALUES ($1, $2, $3)',
+            [docId, signerEmail, 'pending']
+          );
+        }
+        console.log("Todos os signatários foram registados com sucesso no PostgreSQL!");
+      } else {
+        console.log("Nenhum signatário válido foi encontrado no array.");
+      }
+    } else {
+      console.log("O campo 'signers' veio completamente vazio do frontend.");
+    }
+
+    res.status(201).json(newDoc);
   } catch (err) {
+    console.error("ERRO CRÍTICO NO POSTGRESQL:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -130,13 +187,36 @@ app.delete('/api/documents/:id', async (req, res) => {
 
 // Assinar documento (PATCH)
 app.patch('/api/documents/:id/sign', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email do signatário é obrigatório.' });
+  }
+
   try {
     const now = new Date().toLocaleString('pt-PT');
-    await pool.query(
-      "UPDATE documents SET status = 'signed', signed_at = $1 WHERE id = $2",
-      [now, req.params.id]
+    const signerUpdate = await pool.query(
+      "UPDATE document_signers SET status = 'signed', signed_at = $1 WHERE document_id = $2 AND signer_email = $3 RETURNING *",
+      [now, req.params.id, email]
     );
-    res.json({ message: 'Documento assinado!', signedAt: now });
+
+    if (signerUpdate.rowCount === 0) {
+      return res.status(404).json({ error: 'Signatário não encontrado para este documento.' });
+    }
+
+    const pending = await pool.query(
+      "SELECT COUNT(*) AS pending_count FROM document_signers WHERE document_id = $1 AND status <> 'signed'",
+      [req.params.id]
+    );
+    const pendingCount = parseInt(pending.rows[0].pending_count, 10);
+
+    if (pendingCount === 0) {
+      await pool.query(
+        "UPDATE documents SET status = 'signed', signed_at = $1 WHERE id = $2",
+        [now, req.params.id]
+      );
+    }
+
+    res.json({ message: 'Documento assinado!', signedAt: now, pendingSigners: pendingCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
