@@ -3,7 +3,9 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    public_key TEXT,
+    private_key TEXT
 );
 
 -- Criar tabela de documentos
@@ -25,7 +27,8 @@ CREATE TABLE IF NOT EXISTS documents (
 CREATE TABLE IF NOT EXISTS document_signers (
     id SERIAL PRIMARY KEY,
     document_id INT REFERENCES documents(id) ON DELETE CASCADE,
-    signer_email VARCHAR(100) REFERENCES users(email),
+    signer_email VARCHAR(100),
     status VARCHAR(20) DEFAULT 'pending',
-    signed_at TIMESTAMP
+    signed_at TIMESTAMP,
+    signature_hash TEXT
 );

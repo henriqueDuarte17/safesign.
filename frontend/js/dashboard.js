@@ -56,7 +56,8 @@ function formatSignerList(signers = []) {
     }
     return signers.map(s => {
         const stateLabel = s.status === 'signed' ? 'Assinado' : 'Pendente';
-        return `<div><strong>${s.email}</strong> <span style="color:${s.status === 'signed' ? '#1a7f37' : '#d78b00'};">[${stateLabel}]</span></div>`;
+        const hashInfo = s.signature_hash ? `<div style="font-size:0.8rem;opacity:.7;">Hash: ${s.signature_hash}</div>` : '';
+        return `<div><strong>${s.email}</strong> <span style="color:${s.status === 'signed' ? '#1a7f37' : '#d78b00'};">[${stateLabel}]</span>${hashInfo}</div>`;
     }).join('');
 }
 
