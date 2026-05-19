@@ -2,24 +2,27 @@
 const SESS = 'safesign_session';
 const DB = 'safesign_users';
 
+// recupera o email do utilizador logado
 function getEmail() { 
     return sessionStorage.getItem(SESS); 
 }
 
+// obtem a lista dos utilizadores registados
 function getUsers() { 
     try { return JSON.parse(localStorage.getItem(DB) || '{}'); } catch { return {}; } 
 }
 
-// ---- BOOT / PROTEÇÃO DE PÁGINA ----
+// ----PROTEÇÃO DE PÁGINA ---- bloqueia o acesso à dashboard se não houver sessão ativa
 const email = getEmail();
 if (!email) { 
+    // redireciona para a página de login se não houver email na sessão
     window.location.href = 'login.html'; 
 } else {
+    // apresenta os dados do utilizador nos elementos do perfil na topbarq
     const users = getUsers();
     const user = users[email];
     const userName = user?.name || email;
     
-    // Alinhado com os IDs reais do teu HTML original
     if(document.getElementById('topbarName')) document.getElementById('topbarName').textContent = userName;
     if(document.getElementById('topbarEmail')) document.getElementById('topbarEmail').textContent = email;
 }
@@ -36,7 +39,7 @@ function doLogout() {
     window.location.href = 'login.html';
 }
 
-// ---- FILTROS ----
+// ---- altera o filtro ativo e atualiza a tabela ----
 function setFilter(f, btn) {
     currentFilter = f;
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -44,7 +47,7 @@ function setFilter(f, btn) {
     renderDocuments();
 }
 
-// ---- ATUALIZAR STATS ----
+// ---- atualizacao das estatisticas de assinados e pendentes ----
 function updateStats(docs) {
     if (!docs) docs = [];
     const signed = docs.filter(d => d.status === 'signed').length;
@@ -53,6 +56,7 @@ function updateStats(docs) {
     if(document.getElementById('sPending')) document.getElementById('sPending').textContent = pending;
 }
 
+//gera o bloco HTML para renderizar a lista de signatarios na tabela 
 function formatSignerList(signers = []) {
     if (!Array.isArray(signers) || signers.length === 0) {
         return '<span style="opacity: .6;">Sem destinatários</span>';
@@ -64,9 +68,8 @@ function formatSignerList(signers = []) {
     }).join('');
 }
 
-// =========================================================================
-// FUNÇÃO: RENDERIZAR OS DOCUMENTOS NA TABELA (CORRIGIDO PARA O TEU HTML)
-// =========================================================================
+// FUNÇÃO: reconstroi as linhas da tabela de documentos com base no estado global filtrado
+
 function renderDocuments() {
     const tableBody = document.getElementById('docTbody'); // ID real do teu HTML
     if (!tableBody) return;
@@ -119,9 +122,8 @@ function renderDocuments() {
     });
 }
 
-// =========================================================================
-// FUNÇÃO: CARREGAR DOCUMENTOS DA API BACKEND
-// =========================================================================
+// Faz o pedido HTTP GET ao servidor para listar todos os documentos associados ao utilizador
+
 function fetchDocuments() {
     if (!email) return;
     console.log(`[API] A procurar documentos para o e-mail: ${email}`);
@@ -129,7 +131,7 @@ function fetchDocuments() {
         .then(res => {
             if (!res.ok) throw new Error('Erro na resposta do servidor.');
             return res.json();
-        })
+        })  
         .then(data => {
             console.log('[API] Documentos recebidos com sucesso:', data);
             documentsData = Array.isArray(data) ? data : [];
@@ -142,9 +144,8 @@ function fetchDocuments() {
         });
 }
 
-// =========================================================================
-// MODAL DE UPLOAD INTERFACES
-// =========================================================================
+// controla a interface de arrastar ficheiros
+
 function openUpload() { document.getElementById('uploadOverlay').classList.add('show'); }
 function closeUpload() { 
     document.getElementById('uploadOverlay').classList.remove('show');
@@ -153,6 +154,7 @@ function closeUpload() {
     document.getElementById('signersInput').value = '';
 }
 
+// Executada quando um ficheiro é inserido na Dropzone; atualiza o File Preview interno
 function handleFileSelect(file) {
     if (!file) return;
     selectedFile = file;
@@ -166,6 +168,7 @@ function handleFileSelect(file) {
     }
 }
 
+// Remove o ficheiro selecionado e restaura o modal de upload para o estado inicial
 function removeFile() {
     selectedFile = null;
     document.getElementById('fileInput').value = '';
@@ -174,9 +177,8 @@ function removeFile() {
     document.getElementById('btnUploadConfirm').disabled = true;
 }
 
-// =========================================================================
-// CONFIRMAR UPLOAD (ESTRUTURA DE ACORDO COM O TEU HTML ORIGINAL)
-// =========================================================================
+// Constrói o FormData, processa a string de e-mails e envia o novo documento para a API do servidor
+
 async function confirmUpload() {
   const fileInput = document.getElementById('fileInput');
   const docNameInput = document.getElementById('docNameInput');
@@ -186,12 +188,12 @@ async function confirmUpload() {
     alert("Por favor, selecione um ficheiro e dê-lhe um nome.");
     return;
   }
-
+// REQUISITO CO-ASSINATURAS: Separa a string de e-mails por vírgulas e remove os espaços vazios
   const rawSigners = signersInput ? signersInput.value : '';
   const signersArray = rawSigners 
     ? rawSigners.split(',').map(e => e.trim()).filter(e => e.length > 0)
     : [];
-
+//Cria o empacotamento multipart para suportar envio de ficheiros e textos na mesma chamada
   const formData = new FormData();
   formData.append('file', fileInput.files[0]); 
   formData.append('name', docNameInput.value);
@@ -221,9 +223,8 @@ async function confirmUpload() {
   }
 }
 
-// =========================================================================
 // MODAL DE ASSINATURA E VISUALIZAÇÃO
-// =========================================================================
+//Abre o visualizador integrado de documentos carregando a imagem ou o PDF via iframe do servidor
 function openView(url, name) {
     document.getElementById('viewTitle').textContent = name;
     const content = document.getElementById('viewContent');
@@ -235,6 +236,7 @@ function openView(url, name) {
 }
 function closeView() { document.getElementById('viewModal').classList.remove('show'); }
 
+//Abre a caixa de confirmação com os dados criptográficos da assinatura RSA antes de executar a ação
 function openSign(id, name, hash) {
     pendingSign = id;
     document.getElementById('certBox').innerHTML = `Algoritmo: RSA-PSS + SHA-256<br>Documento: ${name}<br>Hash: ${hash}<br>Assinante: ${email}`;
@@ -242,6 +244,7 @@ function openSign(id, name, hash) {
 }
 function closeSign() { document.getElementById('signModal').classList.remove('show'); }
 
+//Executa o pedido HTTP PATCH para registar formalmente a assinatura digital do utilizador corrente
 async function confirmSign() {
     try {
         const response = await fetch(`http://localhost:5000/api/documents/${pendingSign}/sign`, {
@@ -252,7 +255,6 @@ async function confirmSign() {
         if (response.ok) { 
             closeSign(); 
             fetchDocuments(); // Sincroniza e recarrega na hora
-            showToast("Assinado com par de chaves RSA-PSS!", "success"); 
         } else { 
             const errorData = await response.json(); 
             showToast(errorData.error || "Erro ao assinar", "error"); 
@@ -261,7 +263,7 @@ async function confirmSign() {
         showToast("Erro ao assinar", "error"); 
     }
 }
-
+//Envia um pedido HTTP DELETE para remover de forma permanente o registo e ficheiro do servidor
 async function deleteDoc(id) {
     if (!confirm("Eliminar documento?")) return;
     try {
@@ -270,14 +272,6 @@ async function deleteDoc(id) {
     } catch (e) { showToast("Erro ao eliminar", "error"); }
 }
 
-function showToast(msg, type='') {
-    const t = document.getElementById('toast');
-    if(t) {
-        t.textContent = msg;
-        t.className = 'toast show ' + type;
-        setTimeout(() => t.classList.remove('show'), 3000);
-    }
-}
 
 // Inicialização da página
 fetchDocuments();

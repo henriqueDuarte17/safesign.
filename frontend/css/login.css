@@ -16,7 +16,7 @@
       overflow: hidden;
     }
 
-    /* LEFT */
+    /* parte da esquerda do tela */
     .left-panel {
       flex: 1;
       display: flex;
@@ -33,7 +33,7 @@
     .panel-tagline { font-size: 46px; font-weight: 700; color: var(--white); line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 1.5rem; }
     .panel-tagline em { font-style: normal; color: var(--main); }
     
-    /* RIGHT */
+    /* parte da direita da tela */
     .right-panel {
       width: 600px;
       background: var(--bg);
@@ -86,7 +86,7 @@
     .form-footer { margin-top: 2rem; text-align: center; font-size: 12px; color: rgba(13,43,69,0.4); }
     .form-footer a { color: var(--main); text-decoration: none; font-weight: 500; }
 
-    /* --- RESPONSIVIDADE LOGIN --- */
+    /* --- site em diferentes resolucoes  --- */
 @media (max-width: 850px) {
     body { overflow: auto; } /* Permite fazer scroll no tlm */
     .left-panel { display: none; } /* Esconde o painel azul */

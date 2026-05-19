@@ -31,7 +31,6 @@
     <div class="page-header">
       <div>
         <h1>Os meus Documentos</h1>
-        <p>Gerencie, assine e guarde todos os seus documentos num só lugar.</p>
       </div>
       <button class="btn-new" onclick="openUpload()">Novo Documento</button>
     </div>
@@ -65,7 +64,7 @@
     </div>
   </div>
 
-  <!-- UPLOAD MODAL -->
+  <!--tela de carregar ficheiro-->
   <div class="overlay" id="uploadOverlay">
     <div class="modal">
       <div class="modal-header">
@@ -91,14 +90,6 @@
           <button class="fp-remove" onclick="removeFile()">✕</button>
         </div>
 
-        <div class="upload-progress" id="uploadProgress">
-          <div class="progress-label">
-            <span>A processar ficheiro...</span>
-            <span id="progressPct">0%</span>
-          </div>
-          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
-        </div>
-
         <div class="upload-field">
           <label>Nome do documento</label>
           <input type="text" id="docNameInput" placeholder="Ex: Contrato">
@@ -109,9 +100,6 @@
             Emails dos Signatários (separados por vírgula)
           </label>
           <input type="text" id="signersInput" placeholder="Ex: maria@iscte.pt, joao@iscte.pt" style="width: 100%; padding: 0.7rem 1rem; border: 1.5px solid rgba(13,43,69,0.13); border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--dark); background: var(--white); outline: none; transition: 0.2s;">
-          <small style="font-size: 11px; color: rgba(13,43,69,0.45); margin-top: 4px; display: block;">
-            Deixe em branco se o documento for apenas para si.
-          </small>
         </div>
       </div>
       <div class="modal-footer">
@@ -123,7 +111,7 @@
     </div>
   </div>
 
-  <!-- VIEW MODAL -->
+  <!-- tela central para ver o ficheiro ja guardado -->
   <div class="view-modal" id="viewModal">
     <div class="view-box">
       <div class="view-header">
@@ -134,7 +122,7 @@
     </div>
   </div>
 
-  <!-- SIGN MODAL -->
+  <!-- tela de assinatura -->
   <div class="sign-modal" id="signModal">
     <div class="sign-box">
       <h3>Confirmar Assinatura</h3>
