@@ -52,10 +52,11 @@ function updateStats(docs) {
 
 function formatSignerList(signers = []) {
     if (!Array.isArray(signers) || signers.length === 0) {
-        return '<span style="opacity: .6;">Sem assinaturas</span>';
+        return '<span style="opacity: .6;">Sem destinatários</span>';
     }
     return signers.map(s => {
-        return `<div>${statusIcon} ${s.email}</div>`;
+        const stateLabel = s.status === 'signed' ? 'Assinado' : 'Pendente';
+        return `<div><strong>${s.email}</strong> <span style="color:${s.status === 'signed' ? '#1a7f37' : '#d78b00'};">[${stateLabel}]</span></div>`;
     }).join('');
 }
 
@@ -63,7 +64,7 @@ function formatSignerList(signers = []) {
 async function renderDocs() {
     const tbody = document.getElementById('docTbody');
     try {
-        const response = await fetch(`http://127.0.0.1:3000/api/documents?email=${encodeURIComponent(email)}`);
+        const response = await fetch(`http://127.0.0.1:5000/api/documents?email=${encodeURIComponent(email)}`);
         const docs = await response.json();
 
         tbody.innerHTML = '';
@@ -74,6 +75,7 @@ async function renderDocs() {
         }
 
         docs.filter(d => currentFilter === 'all' || d.status === currentFilter).forEach((doc) => {
+            const isPendingSigner = Array.isArray(doc.signers) && doc.signers.some(s => s.email.toLowerCase() === email.toLowerCase() && s.status === 'pending');
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>
@@ -90,7 +92,7 @@ async function renderDocs() {
                 <td>
                     <div class="actions">
                         <button class="btn-action" onclick="openView('${doc.data_url}', '${doc.name}')" title="Ver"> Ver </button>
-                        ${doc.status === 'pending' ? `<button class="btn-action btn-sign" onclick="openSign(${doc.id}, '${doc.name}', '${doc.hash}')" title="Assinar"> Assinar </button>` : ''}
+                        ${isPendingSigner ? `<button class="btn-action btn-sign" onclick="openSign(${doc.id}, '${doc.name}', '${doc.hash}')" title="Assinar"> Assinar </button>` : ''}
                         <button class="btn-action" onclick="deleteDoc(${doc.id})" title="Apagar"> Apagar</button>
                     </div>
                 </td>
@@ -173,7 +175,7 @@ async function confirmUpload() {
 
   // 7. Enviar os dados via fetch para a rota real de upload do teu backend
   try {
-    const response = await fetch('http://127.0.0.1:3000/api/documents/upload', {
+    const response = await fetch('http://127.0.0.1:5000/api/documents/upload', {
       method: 'POST',
       body: formData // Passamos o contentor completo aqui
     });
@@ -200,7 +202,7 @@ async function confirmUpload() {
 function openView(url, name) {
     document.getElementById('viewTitle').textContent = name;
     const content = document.getElementById('viewContent');
-    const finalUrl = `http://127.0.0.1:3000${url}`;
+    const finalUrl = `http://127.0.0.1:5000${url}`;
     content.innerHTML = url.toLowerCase().endsWith('.pdf') 
         ? `<iframe src="${finalUrl}" style="width:100%;height:500px"></iframe>`
         : `<img src="${finalUrl}" style="max-width:100%">`;
@@ -217,7 +219,7 @@ function closeSign() { document.getElementById('signModal').classList.remove('sh
 
 async function confirmSign() {
     try {
-        const response = await fetch(`http://127.0.0.1:3000/api/documents/${pendingSign}/sign`, {
+        const response = await fetch(`http://127.0.0.1:5000/api/documents/${pendingSign}/sign`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
@@ -230,7 +232,7 @@ async function confirmSign() {
 async function deleteDoc(id) {
     if (!confirm("Eliminar documento?")) return;
     try {
-        const response = await fetch(`http://localhost:3000/api/documents/${id}`, { method: 'DELETE' });
+        const response = await fetch(`http://localhost:5000/api/documents/${id}`, { method: 'DELETE' });
         if (response.ok) { renderDocs();}
     } catch (e) { showToast("Erro ao eliminar", "error"); }
 }

@@ -6,7 +6,7 @@ import sys
 import uuid
 import urllib.request
 
-BASE_URL = 'http://127.0.0.1:3000'
+BASE_URL = 'http://127.0.0.1:5000'
 UPLOAD_PATH = pathlib.Path(__file__).parent / 'upload-test.txt'
 if not UPLOAD_PATH.exists():
     UPLOAD_PATH.write_text('Teste de upload com signatários.')

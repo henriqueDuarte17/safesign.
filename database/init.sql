@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS documents (
     status VARCHAR(20) DEFAULT 'pending',
     data_url TEXT,
     hash VARCHAR(100),
+    signed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -26,5 +27,5 @@ CREATE TABLE IF NOT EXISTS document_signers (
     document_id INT REFERENCES documents(id) ON DELETE CASCADE,
     signer_email VARCHAR(100) REFERENCES users(email),
     status VARCHAR(20) DEFAULT 'pending',
-    signed_at VARCHAR(50)
+    signed_at TIMESTAMP
 );

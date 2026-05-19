@@ -145,13 +145,36 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
         signersArray = [signersArray];
       }
 
+      // Normalizar e validar emails
       signersArray = signersArray
         .map(email => String(email).trim())
         .filter(email => email.includes('@'))
+        .map(email => email.toLowerCase())
         .filter((email, index, self) => self.indexOf(email) === index);
 
       console.log("Signatários processados para inserção:", signersArray);
 
+      // Garantir que o proprietário do documento está presente como signatário
+      const ownerEmail = String(user_email).trim().toLowerCase();
+      if (!signersArray.includes(ownerEmail)) {
+        // Inserimos o proprietário como já assinado (assumindo que ao carregar ele aprovou)
+        console.log(`Inserindo proprietário ${ownerEmail} como assinante com estado 'signed' para o documento ${docId}`);
+        await pool.query(
+          'INSERT INTO document_signers (document_id, signer_email, status, signed_at) VALUES ($1, $2, $3, $4)',
+          [docId, ownerEmail, 'signed', new Date()]
+        );
+      } else {
+        // Se o proprietário foi incluído inadvertidamente na lista de signatários, marcá-lo como assinado
+        console.log(`Proprietário ${ownerEmail} estava na lista de signatários; marcando como 'signed'.`);
+        await pool.query(
+          "INSERT INTO document_signers (document_id, signer_email, status, signed_at) VALUES ($1, $2, $3, $4)",
+          [docId, ownerEmail, 'signed', new Date()]
+        );
+        // Remover o proprietário da lista pública de inserção posterior
+        signersArray = signersArray.filter(e => e !== ownerEmail);
+      }
+
+      // Inserir os restantes signatários como 'pending'
       if (signersArray.length > 0) {
         for (const signerEmail of signersArray) {
           console.log(`A tentar inserir o signatário: ${signerEmail} para o documento ${docId}`);
@@ -162,10 +185,16 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
         }
         console.log("Todos os signatários foram registados com sucesso no PostgreSQL!");
       } else {
-        console.log("Nenhum signatário válido foi encontrado no array.");
+        console.log("Nenhum signatário válido foi encontrado no array (apenas o proprietário foi registado).");
       }
     } else {
-      console.log("O campo 'signers' veio completamente vazio do frontend.");
+      // Se não vierem signatários, pelo menos registar o proprietário como 'signed'
+      const ownerEmail = String(user_email).trim().toLowerCase();
+      console.log(`Nenhum signatário fornecido. Inserindo proprietário ${ownerEmail} como 'signed'.`);
+      await pool.query(
+        'INSERT INTO document_signers (document_id, signer_email, status, signed_at) VALUES ($1, $2, $3, $4)',
+        [docId, ownerEmail, 'signed', new Date()]
+      );
     }
 
     res.status(201).json(newDoc);
@@ -193,7 +222,7 @@ app.patch('/api/documents/:id/sign', async (req, res) => {
   }
 
   try {
-    const now = new Date().toLocaleString('pt-PT');
+    const now = new Date();
     const signerUpdate = await pool.query(
       "UPDATE document_signers SET status = 'signed', signed_at = $1 WHERE document_id = $2 AND signer_email = $3 RETURNING *",
       [now, req.params.id, email]
@@ -218,13 +247,14 @@ app.patch('/api/documents/:id/sign', async (req, res) => {
 
     res.json({ message: 'Documento assinado!', signedAt: now, pendingSigners: pendingCount });
   } catch (err) {
+    console.error('Erro ao assinar documento:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 // 6. INICIAR SERVIDOR (Sempre no fim do ficheiro)
-const PORT = parseInt(process.env.PORT || '3000', 10);
+const PORT = parseInt(process.env.PORT || '5000', 10);
 console.log('Rotas registadas:', app._router.stack.filter(r => r.route).map(r => `${Object.keys(r.route.methods).join(',').toUpperCase()} ${r.route.path}`));
 app.listen(PORT, () => {
-  console.log(`Servidor a correr na porta ${PORT}`);
+  console.log(`✓ Servidor SafeSign a correr na porta ${PORT}`);
 });

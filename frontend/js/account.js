@@ -27,7 +27,7 @@ async function doLogin() {
   if (!email || !pass) { showErr('loginError', 'Preencha todos os campos.'); return; }
 
   try {
-    const response = await fetch('http://localhost:3000/api/login', {
+    const response = await fetch('http://localhost:5000/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: pass })
@@ -60,7 +60,7 @@ async function doRegister() {
 
   try {
     // Chamada à API (Interação bidirecional via POST)
-    const response = await fetch('http://localhost:3000/api/register', {
+    const response = await fetch('http://localhost:5000/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password: pass })
