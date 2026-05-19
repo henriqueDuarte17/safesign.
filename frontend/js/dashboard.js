@@ -18,11 +18,14 @@ if (!email) {
     const users = getUsers();
     const user = users[email];
     const userName = user?.name || email;
-    document.getElementById('topbarName').textContent = userName;
-    document.getElementById('topbarEmail').textContent = email;
+    
+    // Alinhado com os IDs reais do teu HTML original
+    if(document.getElementById('topbarName')) document.getElementById('topbarName').textContent = userName;
+    if(document.getElementById('topbarEmail')) document.getElementById('topbarEmail').textContent = email;
 }
 
 // ---- ESTADO GLOBAL ----
+let documentsData = [];
 let currentFilter = 'all';
 let pendingSign   = null; 
 let selectedFile  = null; 
@@ -37,8 +40,8 @@ function doLogout() {
 function setFilter(f, btn) {
     currentFilter = f;
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderDocs();
+    if(btn) btn.classList.add('active');
+    renderDocuments();
 }
 
 // ---- ATUALIZAR STATS ----
@@ -46,8 +49,8 @@ function updateStats(docs) {
     if (!docs) docs = [];
     const signed = docs.filter(d => d.status === 'signed').length;
     const pending = docs.filter(d => d.status === 'pending').length;
-    document.getElementById('sSigned').textContent = signed;
-    document.getElementById('sPending').textContent = pending;
+    if(document.getElementById('sSigned')) document.getElementById('sSigned').textContent = signed;
+    if(document.getElementById('sPending')) document.getElementById('sPending').textContent = pending;
 }
 
 function formatSignerList(signers = []) {
@@ -56,56 +59,92 @@ function formatSignerList(signers = []) {
     }
     return signers.map(s => {
         const stateLabel = s.status === 'signed' ? 'Assinado' : 'Pendente';
-        const hashInfo = s.signature_hash ? `<div style="font-size:0.8rem;opacity:.7;">Hash: ${s.signature_hash}</div>` : '';
+        const hashInfo = s.signature_hash ? `<div style="font-size:0.8rem;opacity:.7;word-break:break-all;">Sig: ${s.signature_hash.substring(0,20)}...</div>` : '';
         return `<div><strong>${s.email}</strong> <span style="color:${s.status === 'signed' ? '#1a7f37' : '#d78b00'};">[${stateLabel}]</span>${hashInfo}</div>`;
     }).join('');
 }
 
-// ---- LISTAGEM (GET) ----
-async function renderDocs() {
-    const tbody = document.getElementById('docTbody');
-    try {
-        const response = await fetch(`http://127.0.0.1:5000/api/documents?email=${encodeURIComponent(email)}`);
-        const docs = await response.json();
+// =========================================================================
+// FUNÇÃO: RENDERIZAR OS DOCUMENTOS NA TABELA (CORRIGIDO PARA O TEU HTML)
+// =========================================================================
+function renderDocuments() {
+    const tableBody = document.getElementById('docTbody'); // ID real do teu HTML
+    if (!tableBody) return;
 
-        tbody.innerHTML = '';
-        updateStats(docs);
-        if (!docs || docs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:3rem; opacity:0.5;">Nenhum documento encontrado.</td></tr>`;
-            return;
+    tableBody.innerHTML = '';
+    updateStats(documentsData);
+
+    // Filtrar os documentos localmente de acordo com a aba selecionada
+    const filteredDocs = documentsData.filter(doc => {
+        if (currentFilter === 'all') return true;
+        return String(doc.status).toLowerCase() === currentFilter.toLowerCase();
+    });
+
+    if (filteredDocs.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:3rem; opacity:0.5;">Nenhum documento encontrado.</td></tr>`;
+        return;
+    }
+
+    filteredDocs.forEach(doc => {
+        const tr = document.createElement('tr');
+
+        // Verificar se o utilizador logado é um dos signatários pendentes
+        const isPendingSigner = Array.isArray(doc.signers) && doc.signers.some(s => s.email.toLowerCase() === email.toLowerCase() && s.status === 'pending');
+
+        // Gerar botões de ação dinâmicos em conformidade com o teu CSS original
+        let actionButtons = `<button class="btn-action btn-view" onclick="openView('${doc.data_url}', '${doc.name}')" title="Ver"> Ver </button>`;
+        
+        if (isPendingSigner) {
+            actionButtons += ` <button class="btn-action btn-sign" onclick="openSign(${doc.id}, '${doc.name}', '${doc.hash}')" title="Assinar"> Assinar </button>`;
         }
 
-        docs.filter(d => currentFilter === 'all' || d.status === currentFilter).forEach((doc) => {
-            const isPendingSigner = Array.isArray(doc.signers) && doc.signers.some(s => s.email.toLowerCase() === email.toLowerCase() && s.status === 'pending');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>
-                    <div class="doc-name-cell">
-                        <div>
-                            <div class="doc-title">${doc.name}</div>
-                            <div class="doc-info">${doc.original_name}</div>
-                        </div>
+        actionButtons += ` <button class="btn-action btn-delete" onclick="deleteDoc(${doc.id})" title="Apagar"> Apagar</button>`;
+
+        tr.innerHTML = `
+            <td>
+                <div class="doc-name-cell">
+                    <div>
+                        <div class="doc-title"><strong>${doc.name || 'Sem nome'}</strong></div>
+                        <div class="doc-size" style="font-size:11px; opacity:0.6;">${doc.original_name || ''}</div>
                     </div>
-                </td>
-                <td>${new Date(doc.created_at).toLocaleDateString('pt-PT')}</td>
-                <td><span class="status-tag status-${doc.status}">${doc.status === 'signed' ? 'Assinado' : 'Pendente'}</span></td>
-                <td>${formatSignerList(doc.signers)}</td>
-                <td>
-                    <div class="actions">
-                        <button class="btn-action" onclick="openView('${doc.data_url}', '${doc.name}')" title="Ver"> Ver </button>
-                        ${isPendingSigner ? `<button class="btn-action btn-sign" onclick="openSign(${doc.id}, '${doc.name}', '${doc.hash}')" title="Assinar"> Assinar </button>` : ''}
-                        <button class="btn-action" onclick="deleteDoc(${doc.id})" title="Apagar"> Apagar</button>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    } catch (error) {
-        console.error("Erro ao renderizar:", error);
-    }
+                </div>
+            </td>
+            <td>${doc.created_at ? new Date(doc.created_at).toLocaleDateString('pt-PT') : '---'}</td>
+            <td><span class="status-tag status-${doc.status}" style="font-weight:600; text-transform:uppercase;">${doc.status === 'signed' ? 'Assinado' : 'Pendente'}</span></td>
+            <td>${formatSignerList(doc.signers)}</td>
+            <td><div class="actions">${actionButtons}</div></td>
+        `;
+
+        tableBody.appendChild(tr);
+    });
 }
 
-// ---- UPLOAD (POST) ----
+// =========================================================================
+// FUNÇÃO: CARREGAR DOCUMENTOS DA API BACKEND
+// =========================================================================
+function fetchDocuments() {
+    if (!email) return;
+    console.log(`[API] A procurar documentos para o e-mail: ${email}`);
+    fetch(`http://localhost:5000/api/documents?email=${encodeURIComponent(email)}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Erro na resposta do servidor.');
+            return res.json();
+        })
+        .then(data => {
+            console.log('[API] Documentos recebidos com sucesso:', data);
+            documentsData = Array.isArray(data) ? data : [];
+            renderDocuments();
+        })
+        .catch(err => {
+            console.error('[ERRO DASHBOARD]:', err);
+            const tbody = document.getElementById('docTbody');
+            if(tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Erro ao carregar documentos do servidor.</td></tr>`;
+        });
+}
+
+// =========================================================================
+// MODAL DE UPLOAD INTERFACES
+// =========================================================================
 function openUpload() { document.getElementById('uploadOverlay').classList.add('show'); }
 function closeUpload() { 
     document.getElementById('uploadOverlay').classList.remove('show');
@@ -135,75 +174,60 @@ function removeFile() {
     document.getElementById('btnUploadConfirm').disabled = true;
 }
 
+// =========================================================================
+// CONFIRMAR UPLOAD (ESTRUTURA DE ACORDO COM O TEU HTML ORIGINAL)
+// =========================================================================
 async function confirmUpload() {
-  // 1. Capturar os elementos do teu HTML
   const fileInput = document.getElementById('fileInput');
   const docNameInput = document.getElementById('docNameInput');
   const signersInput = document.getElementById('signersInput');
 
-  // 2. Identificar o utilizador logado através do email na tua topbar
-  const topbarEmailElement = document.getElementById('topbarEmail');
-  const userEmail = topbarEmailElement ? topbarEmailElement.innerText.trim() : null;
-
-  if (!userEmail || userEmail === "—") {
-    alert("Erro: Não foi possível identificar o utilizador logado.");
-    return;
-  }
-
-  // 3. Validação original: Garante que escolheu um ficheiro e deu um nome
   if (!fileInput.files[0] || !docNameInput.value) {
     alert("Por favor, selecione um ficheiro e dê-lhe um nome.");
     return;
   }
 
-  // 4. Processar a string dos emails dos signatários (separa por vírgulas e limpa espaços)
   const rawSigners = signersInput ? signersInput.value : '';
   const signersArray = rawSigners 
-    ? rawSigners.split(',').map(email => email.trim()).filter(email => email.length > 0)
+    ? rawSigners.split(',').map(e => e.trim()).filter(e => e.length > 0)
     : [];
 
-  // 5. Inicializar o FormData (Essencial vir ANTES de qualquer append para evitar o erro de inicialização!)
   const formData = new FormData();
-  
-  // 6. Empacotar todos os dados para enviar ao teu server.js
-  formData.append('file', fileInput.files[0]); // Mantém o nome 'file' esperado pelo teu Multer
+  formData.append('file', fileInput.files[0]); 
   formData.append('name', docNameInput.value);
-  formData.append('user_email', userEmail);
+  formData.append('user_email', email);
   formData.append('category', 'Contrato');
-  
-  // Envia a lista de signatários estruturada em formato de texto JSON
   formData.append('signers', JSON.stringify(signersArray));
 
-  // 7. Enviar os dados via fetch para a rota real de upload do teu backend
+  console.log('[UPLOAD] A enviar documento cifrado AES para o servidor...');
+
   try {
-    const response = await fetch('http://127.0.0.1:5000/api/documents/upload', {
+    const response = await fetch('http://localhost:5000/api/documents/upload', {
       method: 'POST',
-      body: formData // Passamos o contentor completo aqui
+      body: formData 
     });
 
     if (response.ok) {
-      alert("Documento carregado e partilhado com sucesso!");
-      closeUpload(); // Fecha o teu modal e limpa os campos automaticamente
-      
-      // Se tiveres a função que recarrega a tabela no teu ecrã, ela é executada aqui
-      if (typeof loadDocuments === 'function') {
-        loadDocuments();
-      }
+      alert("Documento carregado, cifrado com AES-GCM e protegido com sucesso!");
+      closeUpload(); 
+      fetchDocuments(); // Recarrega a tabela imediatamente
     } else {
       const errorData = await response.json();
       alert(errorData.error || "Erro ao efetuar o upload.");
     }
   } catch (error) {
     console.error("Erro na ligação ao servidor:", error);
-    alert("Não foi possível ligar ao servidor. Verifique se o Docker está ativo.");
+    alert("Não foi possível ligar ao servidor.");
   }
 }
 
-// ---- AÇÕES (VIEW/SIGN/DELETE) ----
+// =========================================================================
+// MODAL DE ASSINATURA E VISUALIZAÇÃO
+// =========================================================================
 function openView(url, name) {
     document.getElementById('viewTitle').textContent = name;
     const content = document.getElementById('viewContent');
-    const finalUrl = `http://127.0.0.1:5000${url}`;
+    const finalUrl = `http://localhost:5000${url}`;
     content.innerHTML = url.toLowerCase().endsWith('.pdf') 
         ? `<iframe src="${finalUrl}" style="width:100%;height:500px"></iframe>`
         : `<img src="${finalUrl}" style="max-width:100%">`;
@@ -213,37 +237,47 @@ function closeView() { document.getElementById('viewModal').classList.remove('sh
 
 function openSign(id, name, hash) {
     pendingSign = id;
-    document.getElementById('certBox').innerHTML = `Documento: ${name}<br>Hash: ${hash}<br>Assinante: ${email}`;
+    document.getElementById('certBox').innerHTML = `Algoritmo: RSA-PSS + SHA-256<br>Documento: ${name}<br>Hash: ${hash}<br>Assinante: ${email}`;
     document.getElementById('signModal').classList.add('show');
 }
 function closeSign() { document.getElementById('signModal').classList.remove('show'); }
 
 async function confirmSign() {
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/documents/${pendingSign}/sign`, {
+        const response = await fetch(`http://localhost:5000/api/documents/${pendingSign}/sign`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email: email })
         });
-        if (response.ok) { closeSign(); renderDocs(); showToast("Assinado!", "success"); }
-        else { const errorData = await response.json(); showToast(errorData.error || "Erro ao assinar", "error"); }
-    } catch (e) { showToast("Erro ao assinar", "error"); }
+        if (response.ok) { 
+            closeSign(); 
+            fetchDocuments(); // Sincroniza e recarrega na hora
+            showToast("Assinado com par de chaves RSA-PSS!", "success"); 
+        } else { 
+            const errorData = await response.json(); 
+            showToast(errorData.error || "Erro ao assinar", "error"); 
+        }
+    } catch (e) { 
+        showToast("Erro ao assinar", "error"); 
+    }
 }
 
 async function deleteDoc(id) {
     if (!confirm("Eliminar documento?")) return;
     try {
         const response = await fetch(`http://localhost:5000/api/documents/${id}`, { method: 'DELETE' });
-        if (response.ok) { renderDocs();}
+        if (response.ok) { fetchDocuments(); }
     } catch (e) { showToast("Erro ao eliminar", "error"); }
 }
 
 function showToast(msg, type='') {
     const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast show ' + type;
-    setTimeout(() => t.classList.remove('show'), 3000);
+    if(t) {
+        t.textContent = msg;
+        t.className = 'toast show ' + type;
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
 }
 
-// Iniciar a tabela
-renderDocs();
+// Inicialização da página
+fetchDocuments();
