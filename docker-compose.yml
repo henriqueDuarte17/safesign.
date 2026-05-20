@@ -20,7 +20,7 @@ services:
       - ./backend:/app
     ports:
       - "5000:5000"
-    command: sh -c "npm install && npm start"
+    command: node server.js  # <--- Forçar a execução direta do ficheiro
     depends_on:
       - db
     environment:

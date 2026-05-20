@@ -1,3 +1,4 @@
+const https = require('https'); 
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -6,61 +7,58 @@ const { Pool } = require('pg');
 const cors = require('cors');
 const crypto = require('crypto'); // Módulo criptográfico nativo do Node.js [Alto Nível]
 
-// =========================================================================
-// FUNÇÕES CRIPTOGRÁFICAS PEDAGÓGICAS (CONCEITOS DOS SLIDES DO PROFESSOR)
-// =========================================================================
+// FUNÇÕES CRIPTOGRÁFICAS PEDAGÓGICAS 
 
-// [RESUMO/HASH]: Cria o SHA-256 do ficheiro para garantir a integridade [Requisito Obrigatório]
+// [RESUMO/HASH]: Cria o SHA-256 do ficheiro para garantir a integridade 
 function calcularHashFicheiro(filePath) {
-    const fileBuffer = fs.readFileSync(filePath);
-    return crypto.createHash('sha256').update(fileBuffer).digest('hex');
+  const fileBuffer = fs.readFileSync(filePath);
+  return crypto.createHash('sha256').update(fileBuffer).digest('hex');
 }
 
 // [CIFRA SIMÉTRICA]: Aplica AES-256-GCM para proteger o ficheiro armazenado no disco
-const CHAVE_MESTRA = crypto.scryptSync('chave-secreta-safesign', 'salt-sintra', 32); 
+const CHAVE_MESTRA = crypto.scryptSync('chave-secreta-safesign', 'salt-sintra', 32);
 
 function cifrarFicheiro(filePath) {
-    const conteudo = fs.readFileSync(filePath);
-    const iv = crypto.randomBytes(12); // Vetor de Inicialização único (IV)
-    const cipher = crypto.createCipheriv('aes-256-gcm', CHAVE_MESTRA, iv);
-    
-    const cifrado = Buffer.concat([cipher.update(conteudo), cipher.final()]);
-    const tagAutenticacao = cipher.getAuthTag(); // Garante a integridade da cifra
+  const conteudo = fs.readFileSync(filePath);
+  const iv = crypto.randomBytes(12); // Vetor de Inicialização único (IV)
+  const cipher = crypto.createCipheriv('aes-256-gcm', CHAVE_MESTRA, iv);
 
-    // Grava no disco a estrutura compactada: [IV (12B)] + [TAG (16B)] + [Conteúdo Cifrado]
-    const payloadFinal = Buffer.concat([iv, tagAutenticacao, cifrado]);
-    fs.writeFileSync(filePath, payloadFinal);
+  const cifrado = Buffer.concat([cipher.update(conteudo), cipher.final()]);
+  const tagAutenticacao = cipher.getAuthTag(); // Garante a integridade da cifra
+
+  // Grava no disco a estrutura compactada: [IV (12B)] + [TAG (16B)] + [Conteúdo Cifrado]
+  const payloadFinal = Buffer.concat([iv, tagAutenticacao, cifrado]);
+  fs.writeFileSync(filePath, payloadFinal);
 }
 
 // [DECIFRA SIMÉTRICA]: Lê a estrutura do disco e recupera o ficheiro original em memória
 function decifrarFicheiro(filePath) {
-    const payloadBuffer = fs.readFileSync(filePath);
-    
-    const iv = payloadBuffer.subarray(0, 12);
-    const tagAutenticacao = payloadBuffer.subarray(12, 28);
-    const conteudoCifrado = payloadBuffer.subarray(28);
+  const payloadBuffer = fs.readFileSync(filePath);
 
-    const decipher = crypto.createDecipheriv('aes-256-gcm', CHAVE_MESTRA, iv);
-    decipher.setAuthTag(tagAutenticacao);
+  const iv = payloadBuffer.subarray(0, 12);
+  const tagAutenticacao = payloadBuffer.subarray(12, 28);
+  const conteudoCifrado = payloadBuffer.subarray(28);
 
-    return Buffer.concat([decipher.update(conteudoCifrado), decipher.final()]);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', CHAVE_MESTRA, iv);
+  decipher.setAuthTag(tagAutenticacao);
+
+  return Buffer.concat([decipher.update(conteudoCifrado), decipher.final()]);
 }
 
 // [CIFRA ASSIMÉTRICA]: Gera chaves RSA de 2048 bits seguindo as recomendações teóricas
 function gerarParChavesRSA() {
-    return crypto.generateKeyPairSync('rsa', {
-        modulusLength: 2048, 
-        publicKeyEncoding: { type: 'spki', format: 'pem' },
-        privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
-    });
+  return crypto.generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+  });
 }
 
-// =========================================================================
 // CONFIGURAÇÃO E ROTAS DO EXPRESS
-// =========================================================================
+
 const uploadDir = 'uploads/';
-if (!fs.existsSync(uploadDir)){
-    fs.mkdirSync(uploadDir);
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
 }
 
 const storage = multer.diskStorage({
@@ -110,7 +108,7 @@ app.post('/api/register', async (req, res) => {
       'INSERT INTO users (name, email, password, public_key, private_key) VALUES ($1, $2, $3, $4, $5) RETURNING name, email',
       [name, email, password, publicKey, privateKey]
     );
-    
+
     res.status(201).json({ message: 'Utilizador criado com chaves RSA!', user: newUser.rows[0] });
   } catch (err) {
     console.error('[ERRO REGISTO]:', err.message);
@@ -167,17 +165,17 @@ app.get('/api/documents/:email?', async (req, res) => {
 
 // DOWNLOAD SEGURO: Interceta o ficheiro, decifra em memória e envia de forma limpa ao browser
 app.get('/uploads/:filename', async (req, res) => {
-    const targetPath = path.join(__dirname, 'uploads', req.params.filename);
-    if (!fs.existsSync(targetPath)) {
-        return res.status(404).json({ error: 'Ficheiro não encontrado.' });
-    }
-    try {
-        const ficheiroDecifrado = decifrarFicheiro(targetPath);
-        res.setHeader('Content-Type', 'application/pdf'); 
-        res.send(ficheiroDecifrado);
-    } catch (err) {
-        res.status(500).json({ error: 'Erro ao decifrar o documento.', details: err.message });
-    }
+  const targetPath = path.join(__dirname, 'uploads', req.params.filename);
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: 'Ficheiro não encontrado.' });
+  }
+  try {
+    const ficheiroDecifrado = decifrarFicheiro(targetPath);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.send(ficheiroDecifrado);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao decifrar o documento.', details: err.message });
+  }
 });
 
 // UPLOAD: Insere estritamente segundo as colunas e chaves do teu init.sql
@@ -205,7 +203,7 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
       "INSERT INTO documents (user_email, name, category, original_name, size_bytes, data_url, hash, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending') RETURNING *",
       [cleanUserEmail, name, category, fileName, size, `/uploads/${fileName}`, serverCalculatedHash]
     );
-    
+
     const newDoc = result.rows[0];
     const docId = newDoc.id;
 
@@ -285,7 +283,7 @@ app.patch('/api/documents/:id/sign', async (req, res) => {
     const docResult = await pool.query('SELECT hash FROM documents WHERE id = $1', [req.params.id]);
 
     if (userResult.rowCount === 0 || docResult.rowCount === 0) {
-        return res.status(404).json({ error: 'Utilizador ou documento não encontrado.' });
+      return res.status(404).json({ error: 'Utilizador ou documento não encontrado.' });
     }
 
     const privateKeyPem = userResult.rows[0].private_key;
@@ -294,15 +292,15 @@ app.patch('/api/documents/:id/sign', async (req, res) => {
     const assinar = crypto.createSign('RSA-SHA256');
     assinar.update(docHash);
     assinar.end();
-    
+
     const assinaturaDigitalHex = assinar.sign({
-        key: privateKeyPem,
-        padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
-        saltLength: crypto.constants.RSA_PSS_SALTLEN_MAX_LENGTH
+      key: privateKeyPem,
+      padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+      saltLength: crypto.constants.RSA_PSS_SALTLEN_MAX_LENGTH
     }, 'hex');
 
     const now = new Date();
-    
+
     const signerUpdate = await pool.query(
       "UPDATE document_signers SET status = 'signed', signed_at = $1, signature_hash = $2 WHERE document_id = $3 AND signer_email = $4 RETURNING *",
       [now, assinaturaDigitalHex, req.params.id, cleanEmail]
@@ -325,11 +323,11 @@ app.patch('/api/documents/:id/sign', async (req, res) => {
       );
     }
 
-    res.json({ 
-        message: 'Documento assinado digitalmente com sucesso!', 
-        signedAt: now, 
-        pendingSigners: pendingCount,
-        signature: assinaturaDigitalHex 
+    res.json({
+      message: 'Documento assinado digitalmente com sucesso!',
+      signedAt: now,
+      pendingSigners: pendingCount,
+      signature: assinaturaDigitalHex
     });
   } catch (err) {
     console.error('Erro ao assinar documento:', err);
@@ -337,7 +335,25 @@ app.patch('/api/documents/:id/sign', async (req, res) => {
   }
 });
 
-const PORT = parseInt(process.env.PORT || '5000', 10);
-app.listen(PORT, () => {
-  console.log(`✓ Servidor SafeSign Criptográfico a correr na porta ${PORT}`);
-});
+// =========================================================================
+// INICIALIZAÇÃO DO SERVIDOR COM PROTOCOLO HTTPS REAL (X.509)
+// =========================================================================
+const PORT_HTTPS = parseInt(process.env.PORT || '5000', 10);
+
+try {
+  const sslOptions = {
+    key: fs.readFileSync(path.join(__dirname, 'key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, 'cert.pem'))
+  };
+
+  https.createServer(sslOptions, app).listen(PORT_HTTPS, '0.0.0.0', () => {
+    console.log(`✓ [HTTPS] Servidor SafeSign Seguro ativo na porta ${PORT_HTTPS}`);
+  });
+
+} catch (errSSL) {
+  console.error('❌ Erro crítico ao ler chaves SSL (key.pem/cert.pem):', errSSL.message);
+  
+  app.listen(PORT_HTTPS, '0.0.0.0', () => {
+    console.log(`⚠️ [HTTP] Certificados ausentes. Modo inseguro ativo na porta ${PORT_HTTPS}`);
+  });
+}
