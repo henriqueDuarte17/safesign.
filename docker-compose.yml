@@ -18,6 +18,7 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app
+      - ./frontend:/frontend
     ports:
       - "5000:5000"
     command: node server.js  # <--- Forçar a execução direta do ficheiro

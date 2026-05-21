@@ -70,6 +70,7 @@ const upload = multer({ storage: storage });
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static('/app/frontend'));
 app.use(express.urlencoded({ extended: true }));
 
 const pool = new Pool({
@@ -165,7 +166,7 @@ app.get('/api/documents/:email?', async (req, res) => {
 
 // DOWNLOAD SEGURO: Interceta o ficheiro, decifra em memória e envia de forma limpa ao browser
 app.get('/uploads/:filename', async (req, res) => {
-  const targetPath = path.join(__dirname, 'uploads', req.params.filename);
+  const targetPath = path.join('uploads', req.params.filename);
   if (!fs.existsSync(targetPath)) {
     return res.status(404).json({ error: 'Ficheiro não encontrado.' });
   }
